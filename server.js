@@ -1,26 +1,39 @@
+import fs from 'fs';
 import qs from 'qs' // Add this at the top of the file
-import { renderToString } from 'react-dom/server';
-
 import path from 'path'
 import Express from 'express'
+
 import React from 'react'
+import { renderToString } from 'react-dom/server';
 import { createStore } from 'redux'
 import { Provider } from 'react-redux'
 
+// hook for css modules
+require(`css-modules-require-hook`)({
+  generateScopedName: '[name]__[local]___[hash:base64:5]'
+});
+
+// required because of MODULE
 const { MODULE } = process.env;
 const reducers = require(`./src/${MODULE}/reducers`).default;
 const App = require(`./src/${MODULE}/containers/App`).default;
 
+// express app
 const app = Express();
 const port = 3000;
 
-import fs from 'fs';
+// static bundle.js and bundle.css
 app.use('/bundle.js', function (req, res) {
   return fs.createReadStream(`./build/${MODULE}/index.js`).pipe(res);
 });
+
+app.use('/bundle.css', function (req, res) {
+  return fs.createReadStream(`./build/${MODULE}/index.css`).pipe(res);
+});
+
+// react-render
 app.use(handleRender);
 
-// We are going to fill these out in the sections to follow
 function handleRender(req, res) {
   // Read the counter from the request, if provided
   const params = qs.parse(req.query)
@@ -53,6 +66,7 @@ function renderFullPage(html, initialState) {
     <html>
       <head>
         <title>Redux Universal Example</title>
+        <link rel="stylesheet" href="/bundle.css" />
       </head>
       <body>
         <div id="app">${html}</div>

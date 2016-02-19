@@ -8,6 +8,9 @@ import { renderToString } from 'react-dom/server';
 import { createStore } from 'redux'
 import { Provider } from 'react-redux'
 
+// router
+import { match, RouterContext } from 'react-router'
+
 // hook for css modules
 require(`css-modules-require-hook`)({
   generateScopedName: '[name]__[local]___[hash:base64:5]'
@@ -15,8 +18,8 @@ require(`css-modules-require-hook`)({
 
 // required because of MODULE
 const { MODULE } = process.env;
+const routes = require(`./src/${MODULE}/routes`).default;
 const reducers = require(`./src/${MODULE}/reducers`).default;
-const App = require(`./src/${MODULE}/containers/App`).default;
 
 // express app
 const app = Express();
@@ -35,29 +38,39 @@ app.use('/bundle.css', function (req, res) {
 app.use(handleRender);
 
 function handleRender(req, res) {
-  // Read the counter from the request, if provided
-  const params = qs.parse(req.query)
-  const counter = parseInt(params.counter, 10) || 0
+  match({ routes, location: req.url }, (error, redirectLocation, renderProps) => {
+    if (error) {
+      res.status(500).send(error.message)
+    } else if (redirectLocation) {
+      res.redirect(302, redirectLocation.pathname + redirectLocation.search)
+    } else if (renderProps) {
+      ////// Redux
+      // Compile an initial state
+      // Read the counter from the request, if provided
+      const params = qs.parse(req.query);
+      const counter = parseInt(params.counter, 10) || 0;
+      const initialState = { counter };
 
-  // Compile an initial state
-  let initialState = { counter }
+      // Create a new Redux store instance
+      const store = createStore(reducers, initialState)
 
-  // Create a new Redux store instance
-  const store = createStore(reducers, initialState)
+      // Render the component to a string
+      const html = renderToString(
+        <Provider store={store}>
+          <RouterContext {...renderProps} />
+        </Provider>
+      )
 
-  // Render the component to a string
-  const html = renderToString(
-    <Provider store={store}>
-      <App />
-    </Provider>
-  )
+      // Grab the initial state from our Redux store
+      const finalState = store.getState();
+      const page = renderFullPage(html, finalState);
 
-  // Grab the initial state from our Redux store
-  const finalState = store.getState()
-  const page = renderFullPage(html, finalState);
-
-  // Send the rendered page back to the client
-  res.send(page)
+      // Send the rendered page back to the client
+      res.status(200).send(page);
+    } else {
+      res.status(404).send('Not found')
+    }
+  })
 }
 
 function renderFullPage(html, initialState) {
@@ -65,7 +78,7 @@ function renderFullPage(html, initialState) {
     <!doctype html>
     <html>
       <head>
-        <title>Redux Universal Example</title>
+        <title>react-redux-react-router-ssr</title>
         <link rel="stylesheet" href="/bundle.css" />
       </head>
       <body>
@@ -76,7 +89,7 @@ function renderFullPage(html, initialState) {
         <script src="/bundle.js"></script>
       </body>
     </html>
-    `
+  `
 }
 
 app.listen(port, `localhost`, () => {

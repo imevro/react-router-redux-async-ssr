@@ -2,7 +2,8 @@ import React from 'react'
 import { render } from 'react-dom'
 import { createStore } from 'redux'
 import { Provider } from 'react-redux'
-import App from 'cem/containers/App'
+import { Router, browserHistory } from 'react-router';
+import routes from 'cem/routes';
 import reducers from 'cem/reducers'
 
 import 'cem/styles/base';
@@ -15,7 +16,7 @@ const store = createStore(reducers, initialState);
 
 render(
   <Provider store={store}>
-    <App />
+    <Router children={routes} history={browserHistory} />
   </Provider>,
   document.getElementById('app')
 )

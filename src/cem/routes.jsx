@@ -8,7 +8,7 @@ export default (
       <Route path="/" component={Containers.App} />
 
       <Redirect from="/properties" to="/properties/sale" />
-      <Route path="/properties/:kind" component={Containers.Properties.List} />
+      <Route path="/properties/:dealKind" component={Containers.Properties.List} />
     </Route>
   </Route>
 )

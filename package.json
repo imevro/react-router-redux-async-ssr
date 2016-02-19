@@ -11,11 +11,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dthttp": "1.2.3",
+    "isomorphic-fetch": "2.2.1",
     "react": "0.14.7",
     "react-dom": "0.14.7",
     "react-redux": "4.4.0",
     "react-router": "2.0.0",
-    "redux": "3.3.1"
+    "redux": "3.3.1",
+    "redux-logger": "2.5.2",
+    "redux-thunk": "1.0.3"
   },
   "devDependencies": {
     "babel-cli": "6.5.1",

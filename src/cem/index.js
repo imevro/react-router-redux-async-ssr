@@ -1,8 +1,13 @@
 import React from 'react'
 import { render } from 'react-dom'
-import { createStore } from 'redux'
+import { createStore, combineReducers, applyMiddleware } from 'redux'
 import { Provider } from 'react-redux'
 import { Router, browserHistory } from 'react-router';
+
+// middlewares
+import thunk from 'redux-thunk';
+
+// local
 import routes from 'cem/routes';
 import reducers from 'cem/reducers'
 
@@ -12,7 +17,11 @@ import 'cem/styles/base';
 const initialState = window.__INITIAL_STATE__
 
 // Create Redux store with initial state
-const store = createStore(reducers, initialState);
+const store = createStore(
+  combineReducers(reducers),
+  initialState,
+  applyMiddleware(thunk)
+);
 
 render(
   <Provider store={store}>

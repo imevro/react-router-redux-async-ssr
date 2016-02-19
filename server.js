@@ -5,8 +5,11 @@ import Express from 'express'
 
 import React from 'react'
 import { renderToString } from 'react-dom/server';
-import { createStore } from 'redux'
+import { createStore, combineReducers, applyMiddleware } from 'redux'
 import { Provider } from 'react-redux'
+
+import thunk from 'redux-thunk';
+import createLogger from 'redux-logger';
 
 // router
 import { match, RouterContext } from 'react-router'
@@ -20,6 +23,7 @@ require(`css-modules-require-hook`)({
 const { MODULE } = process.env;
 const routes = require(`./src/${MODULE}/routes`).default;
 const reducers = require(`./src/${MODULE}/reducers`).default;
+const logger = createLogger();
 
 // express app
 const app = Express();
@@ -46,34 +50,44 @@ function handleRender(req, res) {
     } else if (renderProps) {
       ////// Redux
       // Compile an initial state
-      // Read the counter from the request, if provided
-      const params = qs.parse(req.query);
-      const counter = parseInt(params.counter, 10) || 0;
-      const initialState = { counter };
+      const initialState = {};
 
       // Create a new Redux store instance
-      const store = createStore(reducers, initialState)
+      const store = createStore(
+        combineReducers(reducers),
+        initialState,
+        applyMiddleware(thunk, logger)
+      );
 
-      // Render the component to a string
-      const html = renderToString(
-        <Provider store={store}>
-          <RouterContext {...renderProps} />
-        </Provider>
-      )
+      const promises = renderProps.components.map((component, index) => {
+        if (component) { // because we have top-route Route without component
+          if (typeof component.load !== 'function') {
+            return false;
+          }
 
-      // Grab the initial state from our Redux store
-      const finalState = store.getState();
-      const page = renderFullPage(html, finalState);
+          return component.load(store.dispatch);
+        };
+      }).filter((elem) => elem instanceof Promise);
 
-      // Send the rendered page back to the client
-      res.status(200).send(page);
+      Promise.all(promises)
+        .then(() => res.status(200).send(renderFullPage(renderProps, store)))
+        .catch(error => console.log(error));
     } else {
       res.status(404).send('Not found')
     }
   })
 }
 
-function renderFullPage(html, initialState) {
+function renderFullPage(renderProps, store) {
+  const initialState = store.getState();
+
+  // Render the component to a string
+  const html = renderToString(
+    <Provider store={store}>
+      <RouterContext {...renderProps} />
+    </Provider>
+  );
+
   return `
     <!doctype html>
     <html>
